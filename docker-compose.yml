@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: parking-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.27.0
+    container_name: parking-weaviate
+    restart: unless-stopped
+    ports:
+      - "8080:8080"     # HTTP / REST
+      - "50051:50051"   # gRPC
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: /var/lib/weaviate
+      # Векторизация выполняется через OpenAI (text2vec-openai).
+      ENABLE_MODULES: text2vec-openai
+      DEFAULT_VECTORIZER_MODULE: text2vec-openai
+      # Ключ можно передать здесь либо в заголовке X-OpenAI-Api-Key из клиента.
+      OPENAI_APIKEY: ${OPENAI_API_KEY}
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+
+volumes:
+  postgres_data:
+  weaviate_data:

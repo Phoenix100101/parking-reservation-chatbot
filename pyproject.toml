@@ -1,0 +1,36 @@
+[project]
+name = "rag-chatbot-reservation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "langchain-core>=1.2.10",
+    "langchain-openai>=1.1.7",
+    "langchain-text-splitters>=1.1.0",
+    "langgraph>=1.0.10",
+    "langchain-weaviate>=0.0.6",
+    "weaviate-client>=4.20.0",
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "spacy>=3.7.0",
+    "python-dotenv>=1.2.1",
+    "psycopg[binary]>=3.3.4",
+    "pydantic-settings>=2.14.1",
+    "psycopg-pool>=3.3.1",
+    "click>=8.4.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+# src on the path so tests import packages the same way the app does
+# (`from evaluation...`, `from data...`), and discovery is scoped to tests/.
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = [
+    "integration: requires a running, seeded Weaviate (and OPENAI_API_KEY)",
+]

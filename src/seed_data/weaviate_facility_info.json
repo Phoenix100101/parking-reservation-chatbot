@@ -1,0 +1,32 @@
+[
+  {
+    "description": "The parking facility is located at 250 West 44th Street in New York City, in the heart of Midtown Manhattan and a five-minute walk from the Times Square–42nd Street subway station. The main vehicle entrance is on the north side of the building, accessible from West 44th Street. Pedestrian entrances are located on the east and west sides, both leading to the central elevator lobby. The facility has six floors of parking above ground (floors 1 through 6) plus two underground levels reserved for long-term contract holders. The nearest landmarks are Bryant Park to the south and Rockefeller Center to the north. Drivers approaching from JFK Airport should take the Long Island Expressway and Queens-Midtown Tunnel into Manhattan, then head west on 42nd Street and turn right onto 8th Avenue; signage is posted approximately 300 meters before the entrance.",
+    "category": "location",
+    "source_doc": "facility_overview"
+  },
+  {
+    "description": "Reservations can be made through the chatbot, the mobile app, or the facility website. To book through the chatbot, simply state that you want to reserve a parking space and provide the requested details: the date you need parking, the time range (start and end), your preferred zone or floor if you have one, the vehicle license plate, and a contact email address where the confirmation will be sent. Reservations can be made up to thirty days in advance and require confirmation within ten minutes of being placed, otherwise the hold expires and the space is released back to the available pool. Cancellations made more than two hours before the start time are refunded in full. Cancellations made within two hours of start time incur a fifty percent fee. No-shows are charged the full reserved amount and may affect future booking eligibility.",
+    "category": "booking_process",
+    "source_doc": "how_to_book"
+  },
+  {
+    "description": "The facility is divided into three zones based on access type and pricing. Zone A occupies floors 1 and 2 and is reserved for short-term visitors and hourly bookings; spaces here are wider than standard and located closest to the main lobby and elevators. Zone B covers floors 3 and 4 and is the standard zone for daily and multi-day reservations. Zone C is on floors 5 and 6 and is the budget tier with reduced rates; it is also where electric vehicle charging stations are concentrated, with twelve fast-charging bays distributed across the two floors. Each zone has its own dedicated elevator bank to avoid congestion at peak times. Zone signage uses color coding: Zone A is blue, Zone B is green, and Zone C is orange.",
+    "category": "parking",
+    "source_doc": "parking_zones"
+  },
+  {
+    "description": "The facility offers a range of amenities for visitors. All floors have twenty-four-hour CCTV coverage and on-site security personnel patrol the premises every two hours. Restrooms are available on floors 1, 3, and 5. A small convenience store and coffee kiosk are located in the main lobby on the ground floor and are open from six in the morning until ten in the evening. Free Wi-Fi is available throughout the building; the network name is ParkConnect and no password is required. Vending machines are placed near the elevator banks on every floor. An air pump and windshield washer station is provided on the ground floor near the exit. Lost and found inquiries can be directed to the security desk in the main lobby.",
+    "category": "general",
+    "source_doc": "amenities"
+  },
+  {
+    "description": "Accessible parking spaces are provided on every floor and located closest to the elevators. Each floor has a minimum of four accessible spaces, marked with the international accessibility symbol and painted blue. All elevators are wheelchair accessible and have braille floor indicators. The main entrance and all pedestrian entrances are step-free with automatic sliding doors. Accessible restrooms are available on floors 1, 3, and 5 alongside the standard restrooms. Service animals are welcome anywhere on the premises. Visitors who require additional assistance can request help at the security desk in the main lobby or by pressing the assistance button at any of the elevator panels, which connects directly to on-duty staff.",
+    "category": "general",
+    "source_doc": "accessibility"
+  },
+  {
+    "description": "Payment is processed at the time of reservation confirmation. Accepted payment methods include all major credit and debit cards. Hourly rates apply in Zone A and start at five hundred tenge per hour. Daily rates apply in Zone B and start at three thousand tenge per day. Zone C is the most economical option at two thousand tenge per day. Multi-day discounts are automatically applied for reservations of three or more consecutive days. Monthly passes are available at the facility office for long-term users. Receipts are emailed automatically upon successful payment. Refunds for eligible cancellations are processed back to the original payment method within five business days.",
+    "category": "booking_process",
+    "source_doc": "payment_and_rates"
+  }
+]

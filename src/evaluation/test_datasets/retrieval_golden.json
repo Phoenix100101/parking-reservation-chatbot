@@ -1,0 +1,16 @@
+{
+  "facility_info": [
+    {"query": "where is the parking garage located and how do I get in?", "relevant": ["facility_overview"]},
+    {"query": "how do I make a reservation and what is the cancellation policy?", "relevant": ["how_to_book"]},
+    {"query": "what parking zones are there and how are they organised?", "relevant": ["parking_zones"]},
+    {"query": "is there wifi, a coffee shop or restrooms?", "relevant": ["amenities"]},
+    {"query": "do you have wheelchair accessible parking and step-free entrances?", "relevant": ["accessibility"]},
+    {"query": "what payment methods do you accept and how much does parking cost?", "relevant": ["payment_and_rates"]}
+  ],
+  "parking_details": [
+    {"query": "where can I charge my electric vehicle?", "relevant": ["Zone C|floor5", "Zone C|floor6"]},
+    {"query": "wider short-term hourly spaces close to the lobby", "relevant": ["Zone A|floor1", "Zone A|floor2"]},
+    {"query": "rooftop open-air parking for a tall van or SUV", "relevant": ["Zone C|floor6"]},
+    {"query": "standard covered daily parking for office workers", "relevant": ["Zone B|floor3", "Zone B|floor4"]}
+  ]
+}

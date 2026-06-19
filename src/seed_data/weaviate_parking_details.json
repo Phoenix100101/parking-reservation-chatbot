@@ -1,0 +1,74 @@
+[
+  {
+    "zone_name": "Zone A",
+    "floor": 1,
+    "capacity_total": 60,
+    "amenities": [
+      "wider spaces",
+      "closest to lobby",
+      "hourly billing",
+      "accessible spaces"
+    ],
+    "description": "Zone A on floor 1 is the premium short-term zone, designed for visitors who need quick access to the main lobby. Spaces here are fifteen percent wider than the standard parking dimensions, making them suitable for larger vehicles and easier loading. The zone is billed hourly and is recommended for visits of less than six hours. Four accessible spaces are reserved at the end of the row closest to the elevator bank."
+  },
+  {
+    "zone_name": "Zone A",
+    "floor": 2,
+    "capacity_total": 60,
+    "amenities": [
+      "wider spaces",
+      "hourly billing",
+      "covered",
+      "accessible spaces"
+    ],
+    "description": "Zone A on floor 2 mirrors floor 1 in pricing and dimensions, providing additional capacity for short-term visitors during peak hours. Floor 2 is fully covered and slightly quieter than floor 1, making it a good choice during inclement weather. Accessible spaces are available adjacent to the elevators."
+  },
+  {
+    "zone_name": "Zone B",
+    "floor": 3,
+    "capacity_total": 80,
+    "amenities": [
+      "daily billing",
+      "covered",
+      "standard size",
+      "accessible spaces"
+    ],
+    "description": "Zone B on floor 3 is the standard zone for daily reservations and is the most common choice for office workers and day visitors. Spaces are standard size and the floor is fully covered. The elevator bank for Zone B is independent of Zone A to reduce congestion during morning and evening peak hours."
+  },
+  {
+    "zone_name": "Zone B",
+    "floor": 4,
+    "capacity_total": 80,
+    "amenities": [
+      "daily billing",
+      "covered",
+      "multi-day discounts",
+      "accessible spaces"
+    ],
+    "description": "Zone B on floor 4 is identical in layout to floor 3 and is preferred by users with multi-day reservations because of the automatic discount applied for three or more consecutive days. Lighting on this floor was upgraded to LED in 2024."
+  },
+  {
+    "zone_name": "Zone C",
+    "floor": 5,
+    "capacity_total": 100,
+    "amenities": [
+      "budget rate",
+      "EV charging",
+      "daily billing",
+      "accessible spaces"
+    ],
+    "description": "Zone C on floor 5 is the economy zone with the lowest daily rates in the facility. Six fast-charging stations for electric vehicles are located along the south wall; charging is billed separately from parking. The zone is slightly further from the main lobby but is well-connected by a dedicated elevator bank."
+  },
+  {
+    "zone_name": "Zone C",
+    "floor": 6,
+    "capacity_total": 100,
+    "amenities": [
+      "budget rate",
+      "EV charging",
+      "open-air",
+      "accessible spaces"
+    ],
+    "description": "Zone C on floor 6 is the rooftop level and offers another six EV fast-charging stations. The level is open-air, which makes it preferable for tall vehicles such as vans and SUVs that exceed the height limit of covered floors. Daily rates match floor 5."
+  }
+]
