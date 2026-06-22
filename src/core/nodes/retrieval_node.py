@@ -1,16 +1,21 @@
+"""RAG retrieval node — answers facility/parking questions from Weaviate.
+
+A parking chatbot has only two knowledge indexes (``FacilityInfo`` and
+``ParkingDetails``), so instead of having the LLM pick one via tool-calling we
+simply query **both** collections and let the responder ground its answer on
+the union. This removes the tool-routing failure mode (picking the wrong index
+or over-filtering on floor/zone, which dropped relevant chunks) and one LLM
+round-trip, at the cost of a couple of cheap extra vector hits.
+"""
+
 import json
 import logging
+from itertools import chain, zip_longest
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from config.configuration import build_chat_model
 from core.state import ChatState
-from langchain_core.messages import (
-    AIMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
-)
-from langchain_core.tools import tool
-
 from data.vector_store.weaviate_client import (
     search_facility_info,
     search_parking_details,
@@ -18,104 +23,71 @@ from data.vector_store.weaviate_client import (
 
 logger = logging.getLogger(__name__)
 
+# How many chunks to pull from each collection.
+_K_PER_COLLECTION = 3
 
-@tool
-def search_facility_info_tool(
-    query: str, category: str | None = None, k: int = 3
-) -> list[dict]:
-    """Search general facility information: opening hours, amenities, contact details,
-    policies, payment methods, how the booking process works.
-
-    Use this tool when the user's question is NOT specifically about parking spots,
-    zones, or floors. Pass `category` only if the user explicitly narrows the topic
-    (e.g. "hours", "payment").
-    """
-    response = search_facility_info(query=query, category=category, k=k)
-    return [obj.properties for obj in response.objects]
-
-
-@tool
-def search_parking_details_tool(
-    query: str,
-    floor: int | None = None,
-    zone_name: str | None = None,
-    k: int = 3,
-) -> list[dict]:
-    """Search parking-specific details: zones, floors, spot types, pricing per zone,
-    accessibility, EV charging spots.
-
-    Use this tool when the user asks specifically about parking spots, zones, or
-    floors. Extract `floor` (integer) and `zone_name` (string) only if the user
-    explicitly mentions them.
-    """
-    response = search_parking_details(
-        query=query, floor=floor, zone_name=zone_name, k=k
-    )
-    return [obj.properties for obj in response.objects]
-
-
-TOOL_REGISTRY = {
-    "search_facility_info_tool": search_facility_info_tool,
-    "search_parking_details_tool": search_parking_details_tool,
-}
-
-# Forced tool use: pick and run a retrieval tool for the question.
-_model = build_chat_model().bind_tools(
-    list(TOOL_REGISTRY.values()), tool_choice="any"
-)
 # Plain model that turns the retrieved chunks into a natural-language answer.
 _responder = build_chat_model()
 
-SYSTEM_PROMPT = """You are a retrieval agent for a parking facility chatbot.
-
-Pick exactly one tool to answer the user's question:
-- `search_parking_details_tool` for questions about parking zones, floors, spot
-  types, EV charging, or accessibility.
-- `search_facility_info_tool` for general facility questions (hours, amenities,
-  payment, policies, how booking works).
-
-Extract filter arguments (category, floor, zone_name) only when the user
-explicitly mentions them. Always pass the user's question as `query`.
-"""
-
 _RESPONDER_PROMPT = """You are a parking facility assistant. Using only the
-retrieved information in the tool results, answer the user's question in one or
-two concise, friendly sentences. Do not invent facts; if nothing relevant was
-retrieved, say you don't have that information."""
+retrieved information provided, answer the user's question in one or two concise,
+friendly sentences. The retrieved items may include entries unrelated to the
+question — ignore those. Do not invent facts; if nothing relevant was retrieved,
+say you don't have that information."""
+
+
+def _search_facility(query: str) -> list[dict]:
+    response = search_facility_info(query=query, k=_K_PER_COLLECTION)
+    return [obj.properties for obj in response.objects]
+
+
+def _search_parking(query: str) -> list[dict]:
+    response = search_parking_details(query=query, k=_K_PER_COLLECTION)
+    return [obj.properties for obj in response.objects]
+
+
+def _retrieve(query: str) -> list[dict]:
+    """Query both collections and merge their hits, interleaved round-robin.
+
+    Each collection is queried independently so a failure in one (e.g. a schema
+    issue) still lets the other contribute. Hybrid scores aren't comparable
+    across collections, so instead of a global ranking we interleave the two
+    ranked lists (facility[0], parking[0], facility[1], …). That keeps both
+    collections represented in any top-k prefix, rather than burying the second
+    collection's hits after the first's. The two searches are independent and
+    could be parallelised, but the dominant cost here is the responder LLM call.
+    """
+    per_collection: list[list[dict]] = []
+    for name, search in (("facility", _search_facility), ("parking", _search_parking)):
+        try:
+            hits = search(query)
+            logger.debug("retrieved %d chunks from %s", len(hits), name)
+            per_collection.append(hits)
+        except Exception:  # one collection failing must not sink the whole turn
+            logger.exception("retrieval failed for %s collection", name)
+
+    # Round-robin interleave, dropping the padding zip_longest inserts for the
+    # shorter list.
+    interleaved = chain.from_iterable(zip_longest(*per_collection))
+    return [hit for hit in interleaved if hit is not None]
 
 
 def rag_agent_node(state: ChatState) -> dict:
     logger.debug("rag_agent (Weaviate): start")
     query = state.get("user_input", "")
 
-    messages: list = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=query),
-    ]
-    ai_msg = _model.invoke(messages)
-    messages.append(ai_msg)
+    retrieved = _retrieve(query)
+    # str(properties) keeps the same chunk format the evaluation harness expects.
+    retrieved_chunks = [str(item) for item in retrieved]
 
-    retrieved_chunks: list[str] = []
-    # Every tool_call must get a matching ToolMessage, or the follow-up LLM call
-    # rejects the conversation.
-    for call in ai_msg.tool_calls:
-        tool_fn = TOOL_REGISTRY.get(call["name"])
-        if tool_fn is None:
-            logger.warning("unknown tool requested: %s", call["name"])
-            messages.append(ToolMessage(content="[]", tool_call_id=call["id"]))
-            continue
-        logger.debug("tool=%s args=%s", call["name"], call["args"])
-        try:
-            result = tool_fn.invoke(call["args"])
-            retrieved_chunks.extend(str(item) for item in result)
-            content = json.dumps(result, default=str)
-        except Exception as exc:  # surface the failure to the synthesiser
-            logger.exception("tool error: %s", call["name"])
-            content = json.dumps({"error": str(exc)})
-        messages.append(ToolMessage(content=content, tool_call_id=call["id"]))
-
+    context = json.dumps(retrieved, default=str)
     final = _responder.invoke(
-        [SystemMessage(content=_RESPONDER_PROMPT), *messages[1:]]
+        [
+            SystemMessage(content=_RESPONDER_PROMPT),
+            HumanMessage(
+                content=f"Question: {query}\n\nRetrieved information:\n{context}"
+            ),
+        ]
     )
     response = final.content if isinstance(final, AIMessage) else str(final)
 

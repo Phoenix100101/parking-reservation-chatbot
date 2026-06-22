@@ -5,10 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class OpenAISettings(BaseSettings):
-    """OpenAI / LLM configuration (env vars prefixed OPENAI_)."""
-
     model_config = SettingsConfigDict(env_prefix="OPENAI_")
-
     api_key: SecretStr
     # Primary model for the agents (router, retrieval, dynamic, reservation).
     model: str = "gpt-4o"
@@ -18,15 +15,20 @@ class OpenAISettings(BaseSettings):
 
 
 class PostgreSQLSettings(BaseSettings):
-    """Postgres connection settings (env vars prefixed POSTGRES_)."""
-
     model_config = SettingsConfigDict(env_prefix="POSTGRES_")
-
     host: str = "localhost"
     port: int = 5432
     user: str = "postgres"
     password: SecretStr = SecretStr("mysecretpassword")
     database: str = "postgres"
+    # Schema pinned on the connection search_path (env var POSTGRES_SCHEMA).
+    schema_name: str = Field(default="parking", validation_alias="POSTGRES_SCHEMA")
+
+    # Connection-pool sizing/timeout (env vars POSTGRES_POOL_*).
+    pool_min_size: int = 2
+    pool_max_size: int = 5
+    # Seconds a caller waits for a free connection before timing out.
+    pool_timeout: float = 5.0
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -40,10 +42,7 @@ class PostgreSQLSettings(BaseSettings):
 
 
 class WeaviateSettings(BaseSettings):
-    """Weaviate connection settings (env vars prefixed WEAVIATE_)."""
-
     model_config = SettingsConfigDict(env_prefix="WEAVIATE_")
-
     host: str = "localhost"
     http_port: int = 8080
     grpc_port: int = 50051
@@ -84,12 +83,9 @@ class GuardrailSettings(BaseSettings):
 
 class Settings(BaseSettings):
     """Top-level application settings, loaded from the environment / .env."""
-
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
     # Root log level (env var LOG_LEVEL). One of DEBUG/INFO/WARNING/ERROR.
     log_level: str = "INFO"
-
     openai: OpenAISettings = Field(default_factory=OpenAISettings)  # type: ignore[arg-type]
     postgres: PostgreSQLSettings = Field(default_factory=PostgreSQLSettings)
     weaviate: WeaviateSettings = Field(default_factory=WeaviateSettings)
@@ -98,20 +94,11 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Return a cached Settings instance (read once per process)."""
     return Settings()
 
 
 def build_chat_model(model: str | None = None, temperature: float | None = None):
-    """Build a ``ChatOpenAI`` from settings, with optional per-call overrides.
-
-    Centralises the API key, default model, and temperature so nodes never
-    hardcode them. Pass ``model`` / ``temperature`` to override a single field
-    (e.g. a node that needs the lighter model or a higher temperature).
-    """
-    # Imported lazily so importing settings doesn't pull in langchain.
     from langchain_openai import ChatOpenAI
-
     openai = get_settings().openai
     return ChatOpenAI(
         model=model or openai.model,

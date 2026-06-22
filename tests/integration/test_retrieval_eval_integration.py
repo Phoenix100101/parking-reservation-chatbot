@@ -2,9 +2,13 @@
 
 These score Recall@k / Precision@k over the bot's **actual retrieval path** —
 ``core.nodes.retrieval_node.rag_agent_node`` — not the raw vector search. The
-node has the LLM pick a tool (facility vs. parking) and its filters, then runs
-the search; this test therefore also catches tool-selection / filter mistakes,
-which is what really degrades answers for users.
+node queries both collections (facility + parking) and merges the hits, so this
+test measures the union the bot actually grounds its answer on.
+
+Note on ``k``: the node returns ``_K_PER_COLLECTION`` chunks from *each*
+collection (6 total by default), interleaved round-robin so both collections
+appear in any top-k prefix. Full recall still needs ``k`` large enough to cover
+both collections (~6); smaller ``k`` trades recall for precision.
 
 Requires a running, **seeded** Weaviate and a valid ``OPENAI_API_KEY``. When
 that environment is unavailable the whole module skips instead of failing.
@@ -24,11 +28,9 @@ from evaluation.retrieval_eval import chunk_doc_id, evaluate, load_golden
 
 pytestmark = pytest.mark.integration
 
-# Cut-off and the regression floor for the bot's retrieval path. This is a
-# *guard against regressions*, not an aspirational target: the bot currently
-# measures ~0.65 mean recall@3 — below the raw index (~0.8+) because the LLM
-# tool-selection / filtering / k=3 layer drops some relevant docs. Raise this
-# as the retrieval path improves; treat a drop below it as a regression.
+# Regression floor for the bot's retrieval path (a guard, not an aspirational
+# target). Measured over the interleaved facility+parking results: ~0.95 mean
+# recall at k>=5, ~0.75 at k=3. Treat a drop below the floor as a regression.
 K = 5
 MIN_MEAN_RECALL = 0.65
 

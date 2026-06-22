@@ -7,7 +7,7 @@ SCHEMA = "parking"
 
 
 def get_connection() -> psycopg.Connection:
-    database_url = f"postgresql://postgres:mysecretpassword@localhost:5432/{DATA_BASE}"
+    database_url = f"postgresql://postgres:mysecretpassword@localhost:5432/{DATA_BASE}" # Replace username and password here
     return psycopg.connect(
         conninfo=database_url,
         connect_timeout=5,

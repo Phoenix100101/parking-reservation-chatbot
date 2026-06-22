@@ -7,7 +7,10 @@ agent's tools. Reservation helpers (`save_reservation`, `get_reservation`,
 agent. All queries target the ``parking`` schema (see sql_schema_script.sql).
 """
 
+import threading
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date, datetime
 from typing import Literal
 
@@ -16,33 +19,73 @@ from psycopg.rows import dict_row
 
 from config.configuration import get_settings
 
-SCHEMA = "parking"
-
 ReservationStatus = Literal["pending", "confirmed", "cancelled", "expired"]
 
 # Reservations in these states occupy the space for their time window.
 _ACTIVE_STATUSES = ("pending", "confirmed")
 
 _pool: ConnectionPool | None = None
+# Guards lazy creation/teardown of the process-wide pool so concurrent callers
+# (LangGraph nodes, eval workers) can never create two pools and leak one.
+_pool_lock = threading.Lock()
 
 
 def _get_pool() -> ConnectionPool:
+    """Return the process-wide connection pool, opening it on first use.
+
+    Thread-safe via double-checked locking. The pool is created closed and
+    opened explicitly (``open=False`` + :meth:`ConnectionPool.open`) so a dead
+    database fails fast here instead of on the first query, and to avoid the
+    deprecated constructor-side ``open=True``. Ownership of the pool's lifetime
+    belongs to :func:`db_lifespan`, which closes it deterministically.
+    """
     global _pool
     if _pool is None:
-        _pool = ConnectionPool(
-            conninfo=get_settings().postgres.url,
-            min_size=2,
-            max_size=5,
-            timeout=5,
-            # Pin search_path at connect time (libpq option) so all queries
-            # resolve against the parking schema without per-call qualification.
-            kwargs={
-                "row_factory": dict_row,
-                "options": f"-c search_path={SCHEMA}",
-            },
-            open=True,
-        )
+        with _pool_lock:
+            if _pool is None:
+                settings = get_settings().postgres
+                pool = ConnectionPool(
+                    conninfo=settings.url,
+                    min_size=settings.pool_min_size,
+                    max_size=settings.pool_max_size,
+                    timeout=settings.pool_timeout,
+                    # Pin search_path at connect time (libpq option) so all
+                    # queries resolve against the parking schema without
+                    # per-call qualification.
+                    kwargs={
+                        "row_factory": dict_row,
+                        "options": f"-c search_path={settings.schema_name}",
+                    },
+                    open=False,
+                )
+                pool.open(wait=True, timeout=settings.pool_timeout)
+                _pool = pool
     return _pool
+
+
+def close_pool() -> None:
+    """Close the pool and stop its worker threads. Idempotent."""
+    global _pool
+    with _pool_lock:
+        if _pool is not None:
+            _pool.close()
+            _pool = None
+
+
+@contextmanager
+def db_lifespan() -> Iterator[None]:
+    """Own the connection pool for the lifetime of a process or run.
+
+    Open the pool on enter and close it deterministically on exit. Wrap the
+    application entry point (CLI/bot ``main``), an eval run, or use it as a
+    pytest fixture so the pool's workers are stopped when the work finishes
+    instead of at interpreter shutdown.
+    """
+    _get_pool()
+    try:
+        yield
+    finally:
+        close_pool()
 
 
 # =============================================================================

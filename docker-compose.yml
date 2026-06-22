@@ -23,10 +23,8 @@ services:
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
       PERSISTENCE_DATA_PATH: /var/lib/weaviate
-      # Векторизация выполняется через OpenAI (text2vec-openai).
       ENABLE_MODULES: text2vec-openai
       DEFAULT_VECTORIZER_MODULE: text2vec-openai
-      # Ключ можно передать здесь либо в заголовке X-OpenAI-Api-Key из клиента.
       OPENAI_APIKEY: ${OPENAI_API_KEY}
     volumes:
       - weaviate_data:/var/lib/weaviate

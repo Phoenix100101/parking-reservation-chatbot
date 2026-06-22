@@ -1,17 +1,3 @@
-"""Central logging configuration.
-
-Call :func:`setup_logging` once at process start-up (e.g. in ``main.py``).
-Everywhere else, get a module-scoped logger with::
-
-    import logging
-    logger = logging.getLogger(__name__)
-
-The ``__name__`` hierarchy (``core.nodes.dynamic_node`` etc.) lets you raise or
-lower the level of a single subtree without touching call sites.
-
-Logs go to **stderr** so they never interleave with the chatbot's stdout UI.
-"""
-
 import logging
 from logging.config import dictConfig
 

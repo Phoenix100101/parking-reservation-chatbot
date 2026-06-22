@@ -23,6 +23,7 @@ of four agents → output guardrail.
   - [Step 6. Seed Weaviate](#step-6-seed-weaviate)
   - [Step 7. Run the application](#step-7-run-the-application)
 - [Environment Variables](#environment-variables)
+- [Testing](#testing)
 - [Useful Commands](#useful-commands)
 - [Security](#security)
 
@@ -153,6 +154,7 @@ defaults in `docker-compose.yml`):
 # --- OpenAI ---
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o
+OPENAI_MINI_MODEL=gpt-4o-mini
 OPENAI_TEMPERATURE=0.0
 
 # --- PostgreSQL ---
@@ -161,6 +163,10 @@ POSTGRES_PORT=5432
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=mysecretpassword
 POSTGRES_DATABASE=postgres
+POSTGRES_SCHEMA=parking
+POSTGRES_POOL_MIN_SIZE=2
+POSTGRES_POOL_MAX_SIZE=5
+POSTGRES_POOL_TIMEOUT=5.0
 
 # --- Weaviate ---
 WEAVIATE_HOST=localhost
@@ -170,6 +176,9 @@ WEAVIATE_GRPC_PORT=50051
 # --- Guardrails (optional) ---
 GUARDRAIL_ENABLED=true
 GUARDRAIL_INJECTION_CHECK=true
+GUARDRAIL_SPACY_MODEL=en_core_web_sm
+GUARDRAIL_MASK_LABELS=PHONE,CREDIT_CARD,SSN,IP_ADDRESS
+GUARDRAIL_BLOCK_INPUT_LABELS=CREDIT_CARD,SSN
 
 # --- Logging (optional) ---
 LOG_LEVEL=INFO
@@ -290,21 +299,58 @@ Settings are read via `pydantic-settings` (`src/config/configuration.py`) from
 | Variable                    | Description                                      | Default             |
 |-----------------------------|--------------------------------------------------|---------------------|
 | `OPENAI_API_KEY`            | OpenAI key (LLM + Weaviate embeddings)           | — (required)        |
-| `OPENAI_MODEL`              | LLM model                                        | `gpt-4o`            |
+| `OPENAI_MODEL`              | Primary LLM model (router, retrieval, dynamic, reservation) | `gpt-4o`            |
+| `OPENAI_MINI_MODEL`         | Lighter LLM model for low-stakes nodes (e.g. out-of-scope) | `gpt-4o-mini`       |
 | `OPENAI_TEMPERATURE`        | Generation temperature                           | `0.0`               |
 | `POSTGRES_HOST`             | Postgres host                                    | `localhost`         |
 | `POSTGRES_PORT`             | Postgres port                                    | `5432`              |
 | `POSTGRES_USER`             | User                                             | `postgres`          |
 | `POSTGRES_PASSWORD`         | Password                                         | `mysecretpassword`  |
 | `POSTGRES_DATABASE`         | Database name                                    | `postgres`          |
+| `POSTGRES_SCHEMA`           | Schema pinned on the connection `search_path`    | `parking`           |
+| `POSTGRES_POOL_MIN_SIZE`    | Connection pool — idle connection floor          | `2`                 |
+| `POSTGRES_POOL_MAX_SIZE`    | Connection pool — hard connection cap            | `5`                 |
+| `POSTGRES_POOL_TIMEOUT`     | Seconds to wait for a free connection            | `5.0`               |
 | `WEAVIATE_HOST`             | Weaviate host                                    | `localhost`         |
 | `WEAVIATE_HTTP_PORT`        | HTTP port                                        | `8080`              |
 | `WEAVIATE_GRPC_PORT`        | gRPC port                                        | `50051`             |
 | `GUARDRAIL_ENABLED`         | Enable guardrails                                | `true`              |
 | `GUARDRAIL_INJECTION_CHECK` | Check for prompt injection                       | `true`              |
+| `GUARDRAIL_SPACY_MODEL`     | spaCy model used by the PII detector             | `en_core_web_sm`    |
 | `GUARDRAIL_MASK_LABELS`     | PII labels to mask in the response (comma-separated) | `PHONE,CREDIT_CARD,SSN,IP_ADDRESS` |
 | `GUARDRAIL_BLOCK_INPUT_LABELS` | PII labels that block the input               | `CREDIT_CARD,SSN`   |
 | `LOG_LEVEL`                 | Root log level (`DEBUG` shows the per-node trace) | `INFO`          |
+
+---
+
+## Testing
+
+Tests live under `tests/` (mirroring `src/`) and are split into `unit/` and
+`integration/`. The suite is configured in `pyproject.toml` (`src` on the
+pythonpath, discovery scoped to `tests/`).
+
+```bash
+# Run the whole suite
+uv run pytest
+
+# Verbose, with coverage of src/
+uv run pytest -v --cov=src
+
+# A single file
+uv run pytest tests/unit/test_retrieval_eval.py -v
+```
+
+**Integration tests** are marked with `@pytest.mark.integration` and require a
+**running, seeded Weaviate** plus a valid `OPENAI_API_KEY` (see Steps 4 & 6). If
+that environment is unavailable they skip rather than fail.
+
+```bash
+# Fast unit-only run (skip integration)
+uv run pytest -m "not integration"
+
+# Integration tests only
+uv run pytest -m integration
+```
 
 ---
 

@@ -2,6 +2,7 @@ from config.configuration import get_settings
 from config.logging_config import setup_logging
 from core.graph.graph import build_graph
 from core.state import ChatState
+from data.sql_store.postgres_client import db_lifespan
 
 setup_logging(get_settings().log_level)
 
@@ -31,13 +32,16 @@ if __name__ == "__main__":
     print("  - 'I want to book a spot'         (reservation → reservation_agent)")
     print("  - 'write me a poem'               (out_of_scope)")
     print("-" * 60)
-    while True:
-        user_input = input("You: ")
-        if user_input.lower() in ("quit", "exit", "q"):
-            print("Goodbye!")
-            break
-        try:
-            response = run_chat(user_input)
-            print(f"Bot: {response}\n")
-        except Exception as exc:
-            print(f"Error: {exc}\n")
+    # Own the DB pool for the whole session: opened here, closed deterministically
+    # on exit so its worker threads stop cleanly instead of at interpreter teardown.
+    with db_lifespan():
+        while True:
+            user_input = input("You: ")
+            if user_input.lower() in ("quit", "exit", "q"):
+                print("Goodbye!")
+                break
+            try:
+                response = run_chat(user_input)
+                print(f"Bot: {response}\n")
+            except Exception as exc:
+                print(f"Error: {exc}\n")
