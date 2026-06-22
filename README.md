@@ -91,26 +91,25 @@ rag-chatbot-reservation/
 ├── docker-compose.yml          # Postgres + Weaviate
 ├── pyproject.toml              # project dependencies
 ├── main.py                     # entry point — console chat
-├── src/
-│   ├── config/
-│   │   └── configuration.py    # Settings (pydantic-settings) from .env
-│   ├── core/
-│   │   ├── graph/graph.py      # LangGraph graph assembly
-│   │   ├── nodes/              # router / retrieval / dynamic / reservation / out_of_scope
-│   │   └── state.py            # ChatState schema
-│   ├── data/
-│   │   ├── vector_store/weaviate_client.py
-│   │   └── sql_store/postgres_client.py
-│   ├── guardrails/             # input_filter / output_filter / pii_detector
-│   ├── evaluation/             # retrieval_eval / performance_eval
-│   └── seed_data/              # SQL schema, seed data, DB seeding scripts
-│       ├── sql_schema_script.sql
-│       ├── postgres_seed.sql
-│       ├── seed_postgresql.py
-│       ├── seed_data_weaviate.py
-│       ├── weaviate_facility_info.json
-│       └── weaviate_parking_details.json
-└── CLAUDE.md
+└── src/
+    ├── config/
+    │   └── configuration.py    # Settings (pydantic-settings) from .env
+    ├── core/
+    │   ├── graph/graph.py      # LangGraph graph assembly
+    │   ├── nodes/              # router / retrieval / dynamic / reservation / out_of_scope
+    │   └── state.py            # ChatState schema
+    ├── data/
+    │   ├── vector_store/weaviate_client.py
+    │   └── sql_store/postgres_client.py
+    ├── guardrails/             # input_filter / output_filter / pii_detector
+    ├── evaluation/             # retrieval_eval / performance_eval
+    └── seed_data/              # SQL schema, seed data, DB seeding scripts
+        ├── sql_schema_script.sql
+        ├── postgres_seed.sql
+        ├── seed_postgresql.py
+        ├── seed_data_weaviate.py
+        ├── weaviate_facility_info.json
+        └── weaviate_parking_details.json
 ```
 
 ---
@@ -122,13 +121,7 @@ rag-chatbot-reservation/
 Install:
 
 - **Python 3.13+**
-- **uv** — package manager:
-  ```bash
-  # Linux / macOS
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  # Windows (PowerShell)
-  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-  ```
+- **uv** — package manager ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
 - **Docker** + **Docker Compose** ([Docker Desktop](https://www.docker.com/products/docker-desktop/) on Windows/macOS)
 - **OpenAI API key** — required for LLM classification, responses, and for Weaviate vectorization (`text2vec-openai`).
 
@@ -147,8 +140,11 @@ git clone <repo-url>
 cd rag-chatbot-reservation
 ```
 
-Create a `.env` file in the project root (the local-dev values match the
-defaults in `docker-compose.yml`):
+Create a `.env` file in the project root. It is the **single source of truth**:
+the same file feeds both the Python app (via `pydantic-settings`) and the
+containers — `docker-compose.yml` substitutes the Postgres credentials, database
+name, and ports from it. `POSTGRES_PASSWORD` and `OPENAI_API_KEY` are
+**required**; the rest fall back to the defaults shown below if omitted:
 
 ```env
 # --- OpenAI ---
@@ -226,9 +222,16 @@ curl http://localhost:8080/v1/.well-known/ready
 docker exec parking-postgres pg_isready -U postgres
 ```
 
-> Weaviate reads the OpenAI key from the `OPENAI_API_KEY` variable (passed into
-> the container via `docker-compose.yml`). Make sure it is set in `.env`
-> **before** running `docker compose up`, or exported in your environment.
+> `docker-compose.yml` pulls its values from `.env`: the Postgres user/password/
+> database and all ports, plus the OpenAI key Weaviate uses for vectorization.
+> `POSTGRES_PASSWORD` and `OPENAI_API_KEY` are required — if either is missing,
+> `docker compose up` fails fast with a clear error instead of starting with an
+> empty value. Set them in `.env` (or export them) **before** bringing the
+> containers up.
+>
+> Tip: to validate the resolved config without leaking secrets to the terminal,
+> run `docker compose config --no-interpolate` (plain `docker compose config`
+> prints the OpenAI key in clear text).
 
 ### Step 5. Initialize and seed PostgreSQL
 
@@ -357,13 +360,6 @@ uv run pytest -m integration
 ## Useful Commands
 
 ```bash
-# Lint and format
-uv run ruff check . --fix
-uv run ruff format .
-
-# Type checking
-uv run mypy src/
-
 # Tests
 uv run pytest
 uv run pytest --cov=src
